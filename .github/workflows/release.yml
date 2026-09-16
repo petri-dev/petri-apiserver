@@ -84,7 +84,6 @@ jobs:
   publish:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [build, lifecycle]
-    environment: production-release
     permissions:
       contents: write
       packages: write

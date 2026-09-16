@@ -75,7 +75,7 @@ routing in your monitoring system, no alert rules are installed.
 
 ## Releases
 
-Version tags (`vX.Y.Z`) build Linux/macOS binaries for amd64/arm64, checksums, a digest-pinned `install.yaml`, and scanned, signed multi-platform GHCR images. Releases use the `production-release` GitHub environment. Manual workflow dispatch validates without publishing. Supply the OIDC configuration Secret before applying `install.yaml`.
+Version tags (`vX.Y.Z`) build Linux/macOS binaries for amd64/arm64, checksums, a digest-pinned `install.yaml`, and scanned, signed multi-platform GHCR images. Manual workflow dispatch validates without publishing. Supply the OIDC configuration Secret before applying `install.yaml`.
 
 ## Development
 
