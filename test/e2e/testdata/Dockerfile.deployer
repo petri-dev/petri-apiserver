@@ -1,0 +1,3 @@
+ARG DEPLOYER_IMAGE=petri-deployer:e2e
+FROM ${DEPLOYER_IMAGE}
+COPY . /charts/e2e

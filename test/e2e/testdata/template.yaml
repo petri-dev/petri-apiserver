@@ -1,0 +1,14 @@
+apiVersion: core.petri.run/v1alpha1
+kind: EnvironmentTemplate
+metadata:
+  name: e2e-template
+  namespace: default
+spec:
+  components:
+    - name: svc
+      helm:
+        chart: /charts/e2e
+        values:
+          image.repository: petri-workload
+          image.tag: e2e-test
+          image.pullPolicy: Never
