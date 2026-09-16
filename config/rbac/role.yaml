@@ -1,0 +1,22 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: petri-apiserver-role
+rules:
+- apiGroups:
+  - core.petri.run
+  resources:
+  - environmenttemplates
+  verbs:
+  - list
+- apiGroups:
+  - core.petri.run
+  resources:
+  - ephemeralenvironments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update

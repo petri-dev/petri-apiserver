@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: # Validation only, dispatch never publishes or signs.
+
+permissions: {}
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+      - name: Test and validate
+        run: |
+          go mod tidy -diff
+          make test
+          go test -tags=e2e ./test/e2e -run '^$'
+          make lint
+          make validate-manifests
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.11
+      - uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        with:
+          version: v0.33.0
+          driver-opts: image=moby/buildkit:v0.33.0@sha256:6c2fa84a6b61ccd72899dde4239f8d5717f05f9a8ca6f3cad185fb1a95a94de3
+      - name: Install checksum-pinned scan tools
+        run: bash hack/release-tools.sh scan
+      - name: Build OCI archive without publishing
+        run: |
+          mkdir -p release
+          docker build --check .
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            --tag "ghcr.io/${GITHUB_REPOSITORY,,}:candidate-$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --provenance=mode=max --metadata-file release/build.json \
+            --output type=oci,dest=release/image.tar .
+      - name: Scan both platforms and generate SBOMs
+        run: bash hack/scan-image.sh release .release-tools
+      - name: Preserve scan diagnostics even when the gate fails
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scan-reports
+          path: release/trivy-*.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Store validated release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-candidate
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  lifecycle:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test-e2e.yml
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build, lifecycle]
+    environment: production-release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: release
+      - name: Install publishing tools
+        run: |
+          bash hack/release-tools.sh sign
+          go install github.com/google/go-containerregistry/cmd/crane@v0.22.1
+      - name: Publish the scanned bytes and sign immutable digests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "$GH_TOKEN" | crane auth login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'crane auth logout ghcr.io' EXIT
+          mkdir release/layout
+          tar -xf release/image.tar -C release/layout
+          expected=$(jq -er '."containerimage.digest"' release/build.json)
+          [[ "$expected" =~ ^sha256:[a-f0-9]{64}$ ]]
+          crane push release/layout "$image:$GITHUB_REF_NAME" --image-refs release/image-ref.txt
+          actual=$(crane digest "$image:$GITHUB_REF_NAME")
+          test "$actual" = "$expected"
+          ref="$image@$expected"
+          .release-tools/cosign sign --yes "$ref"
+          # BuildKit's index binds platform images and their provenance attestations.
+          index="release/layout/blobs/sha256/${expected#sha256:}"
+          for arch in amd64 arm64; do
+            digest=$(jq -er --arg arch "$arch" '.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest' "$index")
+            .release-tools/cosign sign --yes "$image@$digest"
+            .release-tools/cosign attest --yes --type spdxjson \
+              --predicate "release/sbom-$arch.spdx.json" "$image@$digest"
+            .release-tools/cosign attest --yes --type slsaprovenance1 \
+              --predicate "release/provenance-$arch.json" "$image@$digest"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: published-metadata
+          path: |
+            release/image-ref.txt
+            release/provenance-*.json
+            release/sbom-*.spdx.json
+          if-no-files-found: error

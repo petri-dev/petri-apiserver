@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petri-apiserver
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: petri-apiserver
+  template:
+    metadata:
+      labels:
+        app: petri-apiserver
+    spec:
+      serviceAccountName: petri-apiserver
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: apiserver
+          image: petri-apiserver:latest
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: petri-apiserver-config
+          env:
+            - name: PETRI_APISERVER_METRICS_ADDR
+              value: ":9090"
+            - name: PETRI_APISERVER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

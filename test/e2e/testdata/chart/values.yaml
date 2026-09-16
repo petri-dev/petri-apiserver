@@ -1,0 +1,9 @@
+replicaCount: 1
+
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.9"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80

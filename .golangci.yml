@@ -1,0 +1,312 @@
+version: "2"
+
+run:
+  allow-parallel-runners: true
+  build-tags: [e2e]
+
+linters:
+  default: none
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - copyloopvar
+    - cyclop
+    - decorder
+    - dupword
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goprintffuncname
+    - gosec
+    - govet
+    - importas
+    - ineffassign
+    - interfacebloat
+    - intrange
+    - ireturn
+    - misspell
+    - mnd
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - prealloc
+    - predeclared
+    - reassign
+    - recvcheck
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+
+  settings:
+    cyclop:
+      max-complexity: 10
+      package-average: 0.0
+
+    errcheck:
+      check-type-assertions: true
+
+    exhaustive:
+      check:
+        - switch
+        - map
+
+    funlen:
+      lines: 80
+      statements: 40
+
+    gocognit:
+      min-complexity: 15
+
+    goconst:
+      ignore-string-values: '^(true|false|DELETE|GET|POST|PUT|PATCH|HEAD)$'
+
+      min-complexity: 15
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - performance
+      disabled-checks:
+        - appendAssign
+        - commentedOutCode
+        - dupImport
+        - emptyStringTest
+        - hugeParam
+        - ifElseChain
+        - nestingReduce
+        - octalLiteral
+        - rangeValCopy
+        - singleCaseSwitch
+        - tooManyResultsChecker
+        - typeDefFirst
+        - unnamedResult
+        - unnecessaryBlock
+        - whyNoLint
+
+    gosec:
+      excludes:
+        - G101
+        - G108
+        - G306
+        - G307
+        - G401
+        - G402
+        - G404
+        - G505
+        - G704
+        - G705
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+      settings:
+        shadow:
+          strict: true
+
+    interfacebloat:
+      max: 5
+
+    ireturn:
+      allow:
+        - error
+        - stdlib
+        - context.Context
+
+    misspell:
+      ignore-rules:
+        - creater
+
+    mnd:
+      ignored-functions:
+        - os.Chmod
+        - os.Mkdir.*
+        - os.OpenFile
+        - os.WriteFile
+        - prometheus.ExponentialBuckets.*
+        - prometheus.LinearBuckets
+        - strings.SplitN
+        - make
+
+    nakedret:
+      max-func-lines: 0
+
+    nestif:
+      min-complexity: 5
+
+    nolintlint:
+      require-specific: true
+      require-explanation: true
+      allow-unused: false
+      allow-no-explanation: [funlen, gocognit]
+
+    reassign:
+      patterns:
+        - ".*"
+
+    revive:
+      confidence: 0.6
+      rules:
+        - name: bool-literal-in-expr
+        - name: constant-logical-expr
+        - name: context-keys-type
+        - name: duplicated-imports
+        - name: errorf
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: if-return
+        - name: import-shadowing
+        - name: increment-decrement
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: superfluous-else
+        - name: time-naming
+        - name: unreachable-code
+        - name: var-declaration
+
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1016
+        - -QF1008
+
+    usetesting:
+      os-temp-dir: true
+
+    varnamelen:
+      min-name-length: 3
+      ignore-type-assert-ok: true
+      ignore-map-index-ok: true
+      ignore-chan-recv-ok: true
+      ignore-names:
+        - err
+        - ok
+        - id
+        - i
+        - n
+        - t
+        - w
+        - r
+        - wg
+        - tt
+        - tc
+        - cl
+        - h
+        - c
+        - o
+        - p
+        - q
+        - u
+        - v
+        - e
+        - ee
+        - rw
+        - mu
+
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - .Wrap(
+        - .Wrapf(
+        - .Write(
+        - .Do(
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - containedctx
+          - cyclop
+          - dupl
+          - errcheck
+          - exhaustruct
+          - funlen
+          - gochecknoglobals
+          - gocognit
+          - goconst
+          - gocyclo
+          - gosec
+          - ireturn
+          - noctx
+          - varnamelen
+          - wrapcheck
+        text: ''
+      - path: _test\.go
+        linters: [govet]
+        text: 'shadow'
+      - path: test/(e2e|utils)/
+        linters: [gosec]
+        text: 'G204|G702'
+      - path: cmd/preflight/main_test\.go
+        linters: [paralleltest]
+      - path: internal/auth/oidc_test\.go
+        linters: [paralleltest]
+    paths:
+      - third_party$
+      - builtin$
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - blank
+        - dot
+      custom-order: true
+  exclusions:
+    generated: disable
+    paths:
+      - third_party$
+      - builtin$

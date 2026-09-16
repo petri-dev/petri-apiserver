@@ -1,0 +1,6 @@
+apiVersion: v2
+name: petri-e2e-stub
+description: Minimal stub chart for petri e2e tests. Deploys a pause container with the Helm instance label so the readiness checker can find it.
+type: application
+version: 0.1.0
+appVersion: "1.0"
