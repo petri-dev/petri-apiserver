@@ -12,5 +12,7 @@ export DOCKER_CONFIG="$temporary"
 
 test "$(crane digest "$image:$tag")" = "$digest"
 for arch in amd64 arm64; do
-  docker pull --platform "linux/$arch" "$image@$digest"
+  platform_digest=$(crane digest --platform "linux/$arch" "$image@$digest")
+  [[ "$platform_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+  docker pull --platform "linux/$arch" "$image@$platform_digest"
 done
