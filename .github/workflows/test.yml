@@ -31,3 +31,8 @@ jobs:
           go test -tags=e2e ./test/e2e -run '^$'
           make validate-manifests
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.11
+      - name: Check release configuration
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.18.0
+          args: check
