@@ -12,6 +12,7 @@ coverage.*
 profile.cov
 .release-tools/
 release/
+dist/
 
 # Local workspace and editor files
 go.work

@@ -1,0 +1,41 @@
+version: 2
+
+project_name: petri-apiserver
+
+builds:
+  - main: ./cmd/server
+    binary: petri-apiserver
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  draft: true
+  prerelease: auto
+  name_template: "v{{ .Version }}"
+  preflight:
+    fail_on_error: true
+  extra_files:
+    - glob: release/install.yaml
+    - glob: release/image-ref.txt
+    - glob: release/sbom-*.spdx.json
+    - glob: release/provenance-*.json
+    - glob: release/trivy-*.json
